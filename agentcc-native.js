@@ -136,9 +136,7 @@ async function sendMessage(prompt) {
     
     // Initialize Claude client with the found API key
     const client = new Anthropic({ 
-        apiKey,
-        // Set unlimited permissions by not restricting any features
-        dangerouslyAllowBrowser: true
+        apiKey
     });
     
     try {
