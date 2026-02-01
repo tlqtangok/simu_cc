@@ -51,6 +51,22 @@ chmod +x agentcc.js
 ./setup_nodejs.sh
 ```
 
+### Native Version (No API Key Needed!)
+
+```bash
+# Install dependencies
+npm install
+
+# Make executable
+chmod +x agentcc-native.js
+
+# Optional: Run setup script to configure credentials
+./setup_native.sh
+
+# Optional: Install globally
+npm install -g .
+```
+
 Or install globally using npm:
 ```bash
 npm install -g .
@@ -169,11 +185,12 @@ agentcc "Tell me about Node.js async/await"
 
 - `agentcc.py` - Python implementation (API-based)
 - `agentcc.js` - Node.js implementation (API-based)
-- `agentcc-native.js` - Node.js implementation using native Claude Desktop (no API key)
+- `agentcc-native.js` - Node.js implementation using native credentials (no API key setup needed)
 - `requirements.txt` - Python dependencies
 - `package.json` - Node.js dependencies
 - `setup_python.sh` - Python setup script
 - `setup_nodejs.sh` - Node.js setup script
+- `setup_native.sh` - Native version setup script
 
 ## License
 
