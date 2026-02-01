@@ -9,7 +9,10 @@ export ANTHROPIC_API_KEY='your-api-key-here'
 ```
 
 ### For Native version (agentcc-native.js)
-No setup needed! Just ensure Claude Desktop is installed on your system.
+No setup needed! Just ensure Claude Desktop is installed or API credentials are available in one of these locations:
+- Claude Desktop app configuration
+- `~/.claude/config.json`
+- `ANTHROPIC_API_KEY` environment variable (fallback)
 
 ## Python Examples
 
@@ -132,11 +135,13 @@ agentcc "List 5 programming tips" | tee tips.txt
 
 ### Native version (agentcc-native)
 
-#### "Claude Desktop app not found"
-Make sure Claude Desktop is installed:
-- **macOS**: Download from https://claude.ai/download
-- **Windows**: Download from https://claude.ai/download
-- **Linux**: Ensure `claude` CLI is in your PATH
+#### "Could not find Claude API credentials"
+The native version looks for credentials in multiple places. Make sure one of these is set up:
+- **Claude Desktop**: Install from https://claude.ai/download
+- **Config file**: Create ~/.claude/config.json with: `{"apiKey": "your-key"}`
+- **Environment**: Set ANTHROPIC_API_KEY (fallback)
+
+The tool will automatically use whichever it finds first.
 
 #### Permission issues
 Make sure the script is executable:

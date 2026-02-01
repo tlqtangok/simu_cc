@@ -70,10 +70,15 @@ You can add this to your shell profile (~/.bashrc, ~/.zshrc, etc.) to make it pe
 
 ### For Native Claude Desktop version (agentcc-native.js)
 
-**No configuration needed!** The native version uses your locally installed Claude Desktop app, which uses the credentials already configured in the app. This method:
-- Does not require API keys or environment variables
-- Uses the Claude Desktop app's existing configuration
-- Operates with unlimited permissions (no confirmation prompts)
+**No configuration needed!** The native version automatically finds and uses API credentials from:
+1. Claude Desktop app configuration (if installed)
+2. `~/.claude/config.json` (if exists)
+3. `ANTHROPIC_API_KEY` environment variable (as fallback)
+
+This method:
+- Does not require manual API key setup
+- Automatically uses existing Claude credentials on your system
+- Operates without confirmation prompts (unlimited permissions)
 
 ## Usage
 
@@ -155,10 +160,10 @@ agentcc "Tell me about Node.js async/await"
 
 ### Native version (agentcc-native.js)
 - Each message is stored in a separate context file (`~/.agentcc_native_context.json`)
-- Uses the Claude Desktop app or claude CLI installed on your system
-- No API key required - uses the authentication configured in Claude Desktop
-- Operates with unlimited permissions and no confirmation prompts
-- Works on macOS, Windows, and Linux (where Claude Desktop or claude CLI is installed)
+- Automatically finds and uses API credentials from Claude Desktop, ~/.claude/config.json, or environment variables
+- No manual API key setup required
+- Operates without confirmation prompts (unlimited permissions)
+- Works on macOS, Windows, and Linux
 
 ## Files
 

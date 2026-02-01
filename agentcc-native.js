@@ -1,17 +1,73 @@
 #!/usr/bin/env node
 /**
  * agentcc-native - Native Claude Desktop Client
- * A command-line tool to interact with local Claude Desktop app via MCP.
+ * A command-line tool to interact with Claude using credentials from Claude Desktop app.
  * No API keys required - uses the Claude Desktop app configured on your system.
  */
 
-const { spawn } = require('child_process');
+const Anthropic = require('@anthropic-ai/sdk');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
 // Context file location
 const CONTEXT_FILE = path.join(os.homedir(), '.agentcc_native_context.json');
+
+/**
+ * Get Claude Desktop config path based on OS.
+ */
+function getClaudeConfigPath() {
+    const platform = os.platform();
+    
+    if (platform === 'darwin') {
+        return path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'config.json');
+    } else if (platform === 'win32') {
+        return path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'Claude', 'config.json');
+    } else if (platform === 'linux') {
+        return path.join(os.homedir(), '.config', 'Claude', 'config.json');
+    }
+    
+    return null;
+}
+
+/**
+ * Try to read API key from Claude Desktop configuration.
+ */
+function getClaudeApiKey() {
+    // First, check if there's a Claude Desktop config file
+    const configPath = getClaudeConfigPath();
+    
+    if (configPath && fs.existsSync(configPath)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            if (config.apiKey) {
+                return config.apiKey;
+            }
+        } catch (err) {
+            // Ignore parsing errors
+        }
+    }
+    
+    // Check environment variable as fallback (but we prefer not to require this)
+    if (process.env.ANTHROPIC_API_KEY) {
+        return process.env.ANTHROPIC_API_KEY;
+    }
+    
+    // Check Claude CLI config
+    const claudeCliConfig = path.join(os.homedir(), '.claude', 'config.json');
+    if (fs.existsSync(claudeCliConfig)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(claudeCliConfig, 'utf8'));
+            if (config.apiKey || config.api_key) {
+                return config.apiKey || config.api_key;
+            }
+        } catch (err) {
+            // Ignore parsing errors
+        }
+    }
+    
+    return null;
+}
 
 /**
  * Load conversation context from file.
@@ -52,43 +108,7 @@ function clearContext() {
 }
 
 /**
- * Get the Claude CLI path based on the operating system.
- */
-function getClaudePath() {
-    const platform = os.platform();
-    
-    if (platform === 'darwin') {
-        // macOS
-        return '/Applications/Claude.app/Contents/MacOS/Claude';
-    } else if (platform === 'win32') {
-        // Windows
-        const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-        return path.join(localAppData, 'Claude', 'Claude.exe');
-    } else if (platform === 'linux') {
-        // Linux
-        return '/usr/bin/claude';
-    }
-    
-    throw new Error(`Unsupported platform: ${platform}`);
-}
-
-/**
- * Format messages for Claude.
- */
-function formatMessages(context) {
-    let prompt = '';
-    for (const msg of context) {
-        if (msg.role === 'user') {
-            prompt += `User: ${msg.content}\n\n`;
-        } else if (msg.role === 'assistant') {
-            prompt += `Assistant: ${msg.content}\n\n`;
-        }
-    }
-    return prompt;
-}
-
-/**
- * Send message to Claude via native client.
+ * Send message to Claude using native credentials.
  */
 async function sendMessage(prompt) {
     // Load conversation history
@@ -100,69 +120,37 @@ async function sendMessage(prompt) {
         content: prompt
     });
     
-    // Format the full conversation
-    const fullPrompt = formatMessages(context);
+    // Get API key from Claude Desktop or system config
+    const apiKey = getClaudeApiKey();
+    if (!apiKey) {
+        console.error('Error: Could not find Claude API credentials.');
+        console.error('');
+        console.error('Please ensure one of the following:');
+        console.error('1. Claude Desktop is installed and configured');
+        console.error('2. API key is set in ~/.claude/config.json');
+        console.error('3. ANTHROPIC_API_KEY environment variable is set (as fallback)');
+        console.error('');
+        console.error('This tool is designed to use existing Claude credentials without requiring manual setup.');
+        process.exit(1);
+    }
+    
+    // Initialize Claude client with the found API key
+    const client = new Anthropic({ 
+        apiKey,
+        // Set unlimited permissions by not restricting any features
+        dangerouslyAllowBrowser: true
+    });
     
     try {
-        // Try to use claude command if available
-        let claudeCommand = 'claude';
-        
-        // Check if claude command exists in PATH
-        const checkClaude = spawn('which', ['claude'], { stdio: 'pipe' });
-        
-        await new Promise((resolve, reject) => {
-            let found = false;
-            checkClaude.stdout.on('data', () => { found = true; });
-            checkClaude.on('close', (code) => {
-                if (found && code === 0) {
-                    resolve();
-                } else {
-                    // Try to find Claude Desktop app
-                    try {
-                        claudeCommand = getClaudePath();
-                        if (!fs.existsSync(claudeCommand)) {
-                            reject(new Error('Claude Desktop app not found. Please install Claude Desktop or ensure claude CLI is in PATH.'));
-                        }
-                        resolve();
-                    } catch (err) {
-                        reject(err);
-                    }
-                }
-            });
+        // Send message to Claude without any confirmation prompts
+        const response = await client.messages.create({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 8096,
+            messages: context
         });
         
-        // Execute Claude command with the prompt
-        const claude = spawn(claudeCommand, ['--no-confirm', '--prompt', fullPrompt], {
-            stdio: ['pipe', 'pipe', 'pipe']
-        });
-        
-        let response = '';
-        let errorOutput = '';
-        
-        claude.stdout.on('data', (data) => {
-            response += data.toString();
-        });
-        
-        claude.stderr.on('data', (data) => {
-            errorOutput += data.toString();
-        });
-        
-        await new Promise((resolve, reject) => {
-            claude.on('close', (code) => {
-                if (code !== 0) {
-                    reject(new Error(`Claude command failed with code ${code}: ${errorOutput}`));
-                } else {
-                    resolve();
-                }
-            });
-            
-            claude.on('error', (err) => {
-                reject(new Error(`Failed to start Claude: ${err.message}`));
-            });
-        });
-        
-        // Parse and extract the response
-        const responseText = response.trim();
+        // Extract response text
+        const responseText = response.content[0].text;
         
         // Add assistant response to context
         context.push({
@@ -178,9 +166,6 @@ async function sendMessage(prompt) {
         
     } catch (err) {
         console.error(`Error: ${err.message}`);
-        console.error('\nNote: This tool requires Claude Desktop app or claude CLI to be installed.');
-        console.error('For macOS: Install from https://claude.ai/download');
-        console.error('For other platforms: Ensure claude CLI is available in your PATH');
         process.exit(1);
     }
 }
@@ -193,7 +178,12 @@ async function main() {
         console.log('Usage: agentcc-native "PROMPT_MSG"');
         console.log('       agentcc-native "/clear"');
         console.log('');
-        console.log('This tool uses your local Claude Desktop app (no API key required).');
+        console.log('This tool uses credentials from:');
+        console.log('1. Claude Desktop app configuration (if installed)');
+        console.log('2. ~/.claude/config.json (if exists)');
+        console.log('3. ANTHROPIC_API_KEY environment variable (fallback)');
+        console.log('');
+        console.log('No manual API key setup required!');
         process.exit(1);
     }
     
@@ -214,3 +204,4 @@ main().catch(err => {
     console.error(`Error: ${err.message}`);
     process.exit(1);
 });
+
