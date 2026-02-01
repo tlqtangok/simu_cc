@@ -1,0 +1,23 @@
+{
+  "name": "agentcc",
+  "version": "1.0.0",
+  "description": "Claude Code Chat Simulator - A command-line tool to interact with Claude API with context memory",
+  "main": "agentcc.js",
+  "bin": {
+    "agentcc": "./agentcc.js"
+  },
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "cli",
+    "chatbot"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}
