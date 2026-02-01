@@ -4,7 +4,8 @@
   "description": "Claude Code Chat Simulator - A command-line tool to interact with Claude API with context memory",
   "main": "agentcc.js",
   "bin": {
-    "agentcc": "./agentcc.js"
+    "agentcc": "./agentcc.js",
+    "agentcc-native": "./agentcc-native.js"
   },
   "scripts": {
     "test": "echo \"No tests specified\" && exit 0"
