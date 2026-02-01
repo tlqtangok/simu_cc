@@ -19,14 +19,19 @@ def load_context():
         try:
             with open(CONTEXT_FILE, 'r') as f:
                 return json.load(f)
-        except:
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load context file: {e}")
             return []
     return []
 
 def save_context(context):
     """Save conversation context to file."""
-    with open(CONTEXT_FILE, 'w') as f:
-        json.dump(context, f)
+    try:
+        with open(CONTEXT_FILE, 'w') as f:
+            json.dump(context, f)
+    except IOError as e:
+        print(f"Error: Could not save context file: {e}")
+        sys.exit(1)
 
 def clear_context():
     """Clear conversation context."""

@@ -21,6 +21,7 @@ function loadContext() {
             const data = fs.readFileSync(CONTEXT_FILE, 'utf8');
             return JSON.parse(data);
         } catch (err) {
+            console.error(`Warning: Could not load context file: ${err.message}`);
             return [];
         }
     }
@@ -31,7 +32,12 @@ function loadContext() {
  * Save conversation context to file.
  */
 function saveContext(context) {
-    fs.writeFileSync(CONTEXT_FILE, JSON.stringify(context, null, 2));
+    try {
+        fs.writeFileSync(CONTEXT_FILE, JSON.stringify(context, null, 2));
+    } catch (err) {
+        console.error(`Error: Could not save context file: ${err.message}`);
+        process.exit(1);
+    }
 }
 
 /**
